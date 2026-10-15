@@ -226,6 +226,44 @@ function retryWrong() {
   startRound(state.wrong);
 }
 
+function renderLeaderboard() {
+  const board = loadLeaderboard();
+  const container = document.getElementById("leaderboard-tables");
+  container.replaceChildren();
+  for (const mode of ["speed", "hint"]) {
+    for (const category of CATEGORIES) {
+      const entries = board[`${mode}|${category}`];
+      const title = document.createElement("h3");
+      title.textContent = `${MODES[mode].name} ${category}`;
+      container.appendChild(title);
+      if (!Array.isArray(entries) || entries.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = "기록 없음";
+        container.appendChild(empty);
+        continue;
+      }
+      const table = document.createElement("table");
+      const head = document.createElement("tr");
+      for (const label of ["순위", "날짜", "점수"]) {
+        const cell = document.createElement("th");
+        cell.textContent = label;
+        head.appendChild(cell);
+      }
+      table.appendChild(head);
+      entries.forEach((entry, i) => {
+        const row = document.createElement("tr");
+        for (const text of [`${i + 1}`, entry.date, `${entry.score}`]) {
+          const cell = document.createElement("td");
+          cell.textContent = text;
+          row.appendChild(cell);
+        }
+        table.appendChild(row);
+      });
+      container.appendChild(table);
+    }
+  }
+}
+
 function init() {
   document.querySelectorAll("[data-category]").forEach(button => {
     button.addEventListener("click", () => startCategory(button.dataset.category));
@@ -239,6 +277,11 @@ function init() {
     else nextQuestion();
   });
   document.getElementById("retry-button").addEventListener("click", retryWrong);
+  document.getElementById("leaderboard-button").addEventListener("click", () => {
+    renderLeaderboard();
+    showScreen("leaderboard");
+  });
+  document.getElementById("leaderboard-home-button").addEventListener("click", () => showScreen("start"));
   document.getElementById("home-button").addEventListener("click", () => {
     stopTimer();
     showScreen("start");
