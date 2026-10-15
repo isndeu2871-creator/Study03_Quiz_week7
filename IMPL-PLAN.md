@@ -19,6 +19,7 @@
 
 ## 전체 제약
 
+- 카테고리마다 문항 수가 같음. 한 판은 한 카테고리의 문항 전부임(PRD 1절)
 - 앱 파일은 index.html, style.css, script.js, questions.js 4개만 둠(PRD 1절). 점검 코드는 script.js 안에 둠. Node 문항 검사 명령은 파일로 남기지 않음(PRD 6.3항)
 - index.html을 file://로 열어 동작해야 함. questions.js는 `<script>`로 읽고 fetch를 쓰지 않음(PRD 3절)
 - 테스트 라이브러리를 쓰지 않음(PRD 9절). 검증은 3가지로 함(PRD 8절)
@@ -46,7 +47,7 @@ PRD가 말하지 않았으나 사용자가 겪기 쉬운 경우 5개. 각 줄의
 
 | 파일 | 맡는 일 | 만드는 태스크 |
 |---|---|---|
-| questions.js | 전역 `QUESTIONS` 배열, 40문항 | 1 |
+| questions.js | 전역 `QUESTIONS` 배열, 카테고리마다 같은 수의 문항 | 1 |
 | index.html | 화면별 `<section id="screen-…">`, 버튼 마크업. questions.js, script.js 순으로 읽음 | 2 |
 | style.css | 배치, 정답 보기와 고른 오답 보기의 색 | 2 |
 | script.js | `MODES`, `state`, 화면 전환, 채점, 타이머, 힌트, 다시 풀기, 순위표, 점검 함수 | 2 |
@@ -80,23 +81,24 @@ const ctx = {};
 vm.runInNewContext(fs.readFileSync("questions.js", "utf8") + "\nthis.Q = QUESTIONS;", ctx);
 const cats = ["한국사", "세계지리", "과학", "예술과 문화"];
 const errs = [];
-for (const c of cats) {
-  const n = ctx.Q.filter(q => q.category === c).length;
-  if (n !== 10) errs.push(`${c}: ${n}문항`);
-}
-if (ctx.Q.length !== 40) errs.push(`전체: ${ctx.Q.length}문항`);
+const counts = cats.map(c => ctx.Q.filter(q => q.category === c).length);
+const per = counts[0];
+if (per === 0) errs.push("문항이 없음");
+cats.forEach((c, i) => {
+  if (counts[i] !== per) errs.push(`${c}: ${counts[i]}문항(다른 카테고리와 같은 ${per}개여야 함)`);
+});
 for (const q of ctx.Q) {
   if (!cats.includes(q.category)) errs.push(`${q.id}: 카테고리 ${q.category}`);
   if (q.choices.length !== 4 || new Set(q.choices).size !== 4) errs.push(`${q.id}: 보기 4개가 서로 다르지 않음`);
   if (q.choices.filter(c => c === q.answer).length !== 1) errs.push(`${q.id}: 정답이 보기에 정확히 1번 나오지 않음`);
   if (!q.explanation?.trim() || !q.source?.trim()) errs.push(`${q.id}: 해설 또는 출처가 비어 있음`);
 }
-console.log(errs.length ? errs.join("\n") : "문항 검사 통과: 40문항");
+console.log(errs.length ? errs.join("\n") : `문항 검사 통과: ${ctx.Q.length}문항`);
 process.exitCode = errs.length ? 1 : 0;
 EOF
 ```
 
-기대 출력: `문항 검사 통과: 40문항`
+기대 출력: `문항 검사 통과: <전체 문항 수>문항`(구현 1단계 당시 40문항)
 
 - [x] Step 6: `questions.js`를 커밋함
 
@@ -195,7 +197,7 @@ check("채점: 틀리면 0점", () => scoreFor(false, false, "practice") === 0);
 - [x] Step 2: `node script.js`를 실행함. 기대 출력: 새 점검 4개가 FAIL, 끝 줄 `점검 실패: 4개`
 - [x] Step 3: 위 함수를 script.js에 씀. 카테고리 버튼은 `startCategory`, 결과 화면의 [처음으로]는 `showScreen("start")`에 연결함. 결과 화면에 점수와 "순위표에 기록되지 않음"을 보여 줌
 - [x] Step 4: `node script.js`를 실행함. 기대 출력: 끝 줄 `점검 통과: 5개`
-- [x] Step 5: Task 1 Step 5의 Node 문항 검사를 다시 실행함. 기대 출력: `문항 검사 통과: 40문항`
+- [x] Step 5: Task 1 Step 5의 Node 문항 검사를 다시 실행함. 기대 출력: `문항 검사 통과: <전체 문항 수>문항`(구현 1단계 당시 40문항)
 - [x] Step 6: `script.js`, `index.html`을 커밋함
 
 ### Task 4: 1단계 사용자 확인
